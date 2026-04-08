@@ -1,5 +1,7 @@
 # ICDF EDA Streamlit Template
 
+https://advancededaufs-n4safytukywgz7ixlg6srr.streamlit.app/
+
 A production-grade **Exploratory Data Analysis (EDA) and Streamlit deployment template** developed for reproducible analytics workflows within the **Interdisciplinary Centre for Digital Futures (ICDF), University of the Free State (UFS)**.
 
 This repository is designed to support **research-grade, teaching-oriented, and operational analytics pipelines**, enabling rapid movement from **Google Colab experimentation** to **interactive Streamlit deployment**.
