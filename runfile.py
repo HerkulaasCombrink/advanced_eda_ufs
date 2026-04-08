@@ -3,19 +3,22 @@ import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 import tempfile
+import os
 
 
-st.set_page_config(page_title="NetCDF Viewer", layout="wide")
+st.set_page_config(page_title="NetCDF Viewer and Exporter", layout="wide")
 
-st.title("NetCDF File Viewer")
+st.title("NetCDF File Viewer and Panel Data Exporter")
 st.write(
-    "Upload a NetCDF file, inspect its structure, preview variables, "
-    "plot the data, and view a tabular sample."
+    "Upload a NetCDF file, inspect its structure, visualise variables, "
+    "preview the data, and download the full flattened dataset for use in other software."
 )
 
 uploaded_file = st.file_uploader("Upload a NetCDF file", type=["nc", "netcdf"])
 
 if uploaded_file is not None:
+    temp_path = None
+
     try:
         # Save uploaded file temporarily so xarray can open it
         with tempfile.NamedTemporaryFile(delete=False, suffix=".nc") as tmp_file:
@@ -31,7 +34,7 @@ if uploaded_file is not None:
 
         with col1:
             st.subheader("Dimensions")
-            st.write(dict(ds.dims))
+            st.write(dict(ds.sizes))
 
         with col2:
             st.subheader("Coordinates")
@@ -54,12 +57,11 @@ if uploaded_file is not None:
             st.write(dict(da.attrs) if da.attrs else "No attributes found.")
 
             st.subheader("Plot")
-
             fig, ax = plt.subplots(figsize=(10, 6))
 
             if "time" in da.dims:
                 time_index = st.slider(
-                    "Select time index",
+                    "Select time index for plotting",
                     min_value=0,
                     max_value=max(0, da.sizes["time"] - 1),
                     value=0
@@ -70,22 +72,49 @@ if uploaded_file is not None:
 
             st.pyplot(fig)
 
-            st.subheader("Data Preview")
+            st.subheader("Variable Preview")
 
             if "time" in da.dims:
-                df = da.isel(time=0).to_dataframe().reset_index()
+                preview_df = da.isel(time=0).to_dataframe().reset_index()
             else:
-                df = da.to_dataframe().reset_index()
+                preview_df = da.to_dataframe().reset_index()
 
-            st.dataframe(df.head())
+            st.dataframe(preview_df.head())
 
-            csv = df.to_csv(index=False).encode("utf-8")
+            preview_csv = preview_df.to_csv(index=False).encode("utf-8")
             st.download_button(
-                label="Download preview data as CSV",
-                data=csv,
+                label="Download variable preview as CSV",
+                data=preview_csv,
                 file_name=f"{var_name}_preview.csv",
                 mime="text/csv"
             )
 
+            st.subheader("Full Dataset Export")
+
+            st.write(
+                "The button below converts the entire NetCDF dataset into a flattened panel-style table "
+                "and downloads it as CSV."
+            )
+
+            # Convert the whole dataset to a single flattened DataFrame
+            full_df = ds.to_dataframe().reset_index()
+
+            st.write("Full dataset shape:")
+            st.write(full_df.shape)
+
+            st.dataframe(full_df.head())
+
+            full_csv = full_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Download full panel dataset as CSV",
+                data=full_csv,
+                file_name="full_panel_dataset.csv",
+                mime="text/csv"
+            )
+
     except Exception as e:
-        st.error(f"An error occurred while reading the file: {e}")
+        st.error(f"An error occurred while reading or converting the file: {e}")
+
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.remove(temp_path)
